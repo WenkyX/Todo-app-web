@@ -49,6 +49,47 @@
 }
 .dark-toggle:hover { background: var(--surface2); }
 
+
+/* Pill toggles */
+.pill-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.pill-toggle input[type="checkbox"] { display: none; }
+.pill-track {
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--border2);
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.pill-track::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  top: 3px;
+  left: 3px;
+  transition: left 0.15s, background 0.15s;
+}
+.pill-toggle input:checked + .pill-track { background: var(--accent); }
+.pill-toggle input:checked + .pill-track::after { left: 15px; }
+.pill-toggle.is-start input:checked + .pill-track { background: #3b82f6; }
+.pill-toggle.is-done  input:checked + .pill-track { background: #2e7d4f; }
+[data-theme="dark"] .pill-toggle.is-start input:checked + .pill-track { background: #4a9eff; }
+[data-theme="dark"] .pill-toggle.is-done  input:checked + .pill-track { background: #5abf80; }
 /* Scrollbars */
 :root {
   --scrollbar-track: var(--surface2);
@@ -487,8 +528,16 @@ button:hover { background: var(--surface2); }
     </div>
     <div class="modal-body">
       <div>
-        <div class="settings-section-title"><span>Name</span></div>
-        <input type="text" id="settingsName" placeholder="e.g. John" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);margin-bottom:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.4px">Name</label>
+            <input type="text" id="settingsName" placeholder="e.g. John" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.4px">Daily lookback (days)</label>
+            <input type="number" id="settingsLookback" min="1" max="30" step="1" placeholder="1" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface)">
+          </div>
+        </div>
       </div>
       <div>
         <div class="settings-section-title">
@@ -581,12 +630,16 @@ let autoScrollDir = 0;
 
 const DEFAULT_STATE = {
   name: '',
-  categories: ['Personal', 'Work'],
+  exportLookback: 1,
+  categories: [
+    {name:'Personal', is_daily:true}, 
+    {name:'Work',     is_daily:true}, 
+  ],
   stages: [
-    {name:'Backlog',   is_start:false, is_done:false},
-    {name:'In Progress', is_start:true,  is_done:false},
-    {name:'Review',    is_start:false, is_done:false},
-    {name:'Done',      is_start:false, is_done:true}
+    {name:'Backlog',      is_start:false, is_done:false},
+    {name:'In Progress',  is_start:true,  is_done:false},
+    {name:'Review',       is_start:false, is_done:false},
+    {name:'Done',         is_start:false, is_done:true}
   ],
   cards: []
 };
@@ -753,7 +806,7 @@ function renderCatBar() {
   state.categories.forEach(c => {
     const t = document.createElement('button');
     t.className = 'cat-tab' + (c === cat ? ' active' : '');
-    t.textContent = c;
+    t.textContent = c.name;
     t.onclick = () => { activeCat = c; render(); };
     bar.appendChild(t);
   });
@@ -773,7 +826,7 @@ function renderBoard() {
     const stage = stageObj.name;
     // Sort cards by seq for this bucket
     const cards = state.cards
-      .filter(c => c.category === cat && c.stage === stage)
+      .filter(c => c.category === cat.name && c.stage === stage)
       .sort((a, b) => (a.seq || 0) - (b.seq || 0));
 
     const col = document.createElement('div');
@@ -806,12 +859,12 @@ function renderBoard() {
       const card = dragCard;
       const prevStage = card.stage;
       const prevCat   = card.category;
-      if (prevStage !== stage || prevCat !== cat) {
-        card.seq = nextSeq(cat, stage);
-        applyDragMove(card, stage, cat, stageObj, () => save().then(render));
+      if (prevStage !== stage || prevCat !== cat.name) {
+        card.seq = nextSeq(cat.name, stage);
+        applyDragMove(card, stage, cat.name, stageObj, () => save().then(render));
       } else {
-        card.seq = nextSeq(cat, stage) + 1;
-        reseq(cat, stage);
+        card.seq = nextSeq(cat.name, stage) + 1;
+        reseq(cat.name, stage);
         save().then(render);
       }
     });
@@ -1109,7 +1162,7 @@ function populateCardSelects(cat, stage) {
   catSel.innerHTML = '';
   state.categories.forEach(c => {
     const o = document.createElement('option');
-    o.value = c; o.textContent = c;
+    o.value = c.name; o.textContent = c.name;
     if (c === cat) o.selected = true;
     catSel.appendChild(o);
   });
@@ -1255,28 +1308,47 @@ async function renderStorageInfo() {
 
 function renderSettingsPanel() {
   document.getElementById('settingsName').value = state.name || '';
+  document.getElementById('settingsLookback').value = state.exportLookback !== undefined ? state.exportLookback : 1;
   const cl = document.getElementById('catList');
   cl.innerHTML = '';
+
+  const makeToggle = (label, field, item, index) => {
+    const lbl = document.createElement('label');
+    lbl.className = 'pill-toggle ' + field;
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = !!item[field];
+    chk.dataset.field = field;
+    chk.dataset.idx = index;
+    const track = document.createElement('span');
+    track.className = 'pill-track';
+    lbl.appendChild(chk);
+    lbl.appendChild(track);
+    lbl.appendChild(document.createTextNode(label));
+    return lbl;
+  };
+
   state.categories.forEach((c, i) => {
     const row = document.createElement('div');
     row.className = 'list-item';
     const inp = document.createElement('input');
-    inp.value = c;
+    inp.value = c.name;
     inp.dataset.idx = i;
     const del = document.createElement('button');
     del.className = 'btn-danger';
     del.style.cssText = 'font-size:11px;padding:2px 8px;flex-shrink:0';
     del.textContent = 'Remove';
     del.onclick = () => {
-      if (state.cards.some(card => card.category === c)) {
-        if (!confirm('Remove category "' + c + '"? All tasks in it will be deleted.')) return;
-        state.cards = state.cards.filter(card => card.category !== c);
+      if (state.cards.some(card => card.category === c.name)) {
+        if (!confirm('Remove category "' + c.name + '"? All tasks in it will be deleted.')) return;
+        state.cards = state.cards.filter(card => card.category !== c.name);
       }
       state.categories.splice(i, 1);
       if (activeCat === c) activeCat = state.categories[0] || null;
       save().then(renderSettingsPanel);
     };
     row.appendChild(inp);
+    row.appendChild(makeToggle('Daily', 'is_daily', c, i));
     row.appendChild(del);
     cl.appendChild(row);
   });
@@ -1294,19 +1366,6 @@ function renderSettingsPanel() {
     inp.dataset.idx = i;
     inp.style.minWidth = '100px';
 
-    const makeToggle = (label, field) => {
-      const lbl = document.createElement('label');
-      lbl.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0';
-      const chk = document.createElement('input');
-      chk.type = 'checkbox';
-      chk.checked = !!s[field];
-      chk.dataset.field = field;
-      chk.dataset.idx = i;
-      lbl.appendChild(chk);
-      lbl.appendChild(document.createTextNode(label));
-      return lbl;
-    };
-
     const del = document.createElement('button');
     del.className = 'btn-danger';
     del.style.cssText = 'font-size:11px;padding:2px 8px;flex-shrink:0';
@@ -1322,15 +1381,15 @@ function renderSettingsPanel() {
     };
 
     row.appendChild(inp);
-    row.appendChild(makeToggle('is_start', 'is_start'));
-    row.appendChild(makeToggle('is_done', 'is_done'));
+    row.appendChild(makeToggle('Start', 'is_start', s, i));
+    row.appendChild(makeToggle('Done', 'is_done', s, i));
     row.appendChild(del);
     sl.appendChild(row);
   });
 }
 
 function addCategory() {
-  state.categories.push('New Category');
+  state.categories.push({name:'New Category', is_daily:true});
   save().then(renderSettingsPanel);
   setTimeout(() => {
     const inputs = document.querySelectorAll('#catList input');
@@ -1358,17 +1417,23 @@ function addStageInline() {
 
 async function saveSettings() {
   state.name = document.getElementById('settingsName').value.trim();
+  state.exportLookback = Math.max(1, parseInt(document.getElementById('settingsLookback').value) || 1);
 
-  const catInputs = document.querySelectorAll('#catList input');
+  const catRows = document.querySelectorAll('#catList .list-item');
   const newCats = [];
-  catInputs.forEach((inp, i) => {
-    const nv = inp.value.trim();
+  catRows.forEach((row, i) => {
+    const inp = row.querySelector('input:not([type="checkbox"])');
+    const nv = inp ? inp.value.trim() : '';
     const old = state.categories[i];
-    if (nv && old && nv !== old) {
-      state.cards.forEach(c => { if (c.category === old) c.category = nv; });
+    if (nv && old && nv !== old.name) {
+      state.cards.forEach(c => { if (c.category === old.name) c.category = nv; });
       if (activeCat === old) activeCat = nv;
     }
-    if (nv) newCats.push(nv);
+    const dailyChk = row.querySelector('input[data-field="is_daily"]');
+    if (nv) newCats.push({
+      name: nv,
+      is_daily: dailyChk ? dailyChk.checked : false,
+    });
   });
   state.categories = newCats;
 
@@ -1425,15 +1490,18 @@ function exportCSV() {
 
 function openTextExport() {
   const now = new Date();
-  const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 1, 0);
+  const lookback = state.exportLookback !== undefined ? state.exportLookback : 1;
+  const dayOffset = now.getDay() === 1 ? 3 : lookback;
+  const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOffset, 0, 1, 0);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const formattedDate = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
   const nameStr = state.name ? state.name + ' ' : '';
   const lines = ['Daily ' + nameStr + formattedDate + ':'];
   state.categories.forEach(cat => {
-    const catCards = state.cards.filter(c => c.category === cat);
+    const catCards = state.cards.filter(c => c.category === cat.name);
     if (!catCards.length) return;
-    lines.push('*' + cat + '*');
+    if (!cat.is_daily) return;
+    lines.push('*' + cat.name + '*');
     state.stages.forEach(stageObj => {
       let stageCards = catCards.filter(c => c.stage === stageObj.name);
       if (stageObj.is_done) {
