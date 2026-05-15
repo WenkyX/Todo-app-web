@@ -815,7 +815,7 @@ function renderCatBar() {
 function renderBoard() {
   const board = document.getElementById('board');
   board.innerHTML = '';
-  const cat = getActiveCat();
+  const cat = getActiveCat().name;
 
   if (!cat) {
     board.innerHTML = '<div class="empty-board"><p style="font-size:15px;font-weight:500;color:#888">No categories</p><p>Click Manage to add one.</p></div>';
@@ -826,7 +826,7 @@ function renderBoard() {
     const stage = stageObj.name;
     // Sort cards by seq for this bucket
     const cards = state.cards
-      .filter(c => c.category === cat.name && c.stage === stage)
+      .filter(c => c.category === cat && c.stage === stage)
       .sort((a, b) => (a.seq || 0) - (b.seq || 0));
 
     const col = document.createElement('div');
@@ -859,11 +859,11 @@ function renderBoard() {
       const card = dragCard;
       const prevStage = card.stage;
       const prevCat   = card.category;
-      if (prevStage !== stage || prevCat !== cat.name) {
-        card.seq = nextSeq(cat.name, stage);
-        applyDragMove(card, stage, cat.name, stageObj, () => save().then(render));
+      if (prevStage !== stage || prevCat !== cat) {
+        card.seq = nextSeq(cat, stage);
+        applyDragMove(card, stage, cat, stageObj, () => save().then(render));
       } else {
-        card.seq = nextSeq(cat.name, stage) + 1;
+        card.seq = nextSeq(cat, stage) + 1;
         reseq(cat.name, stage);
         save().then(render);
       }
