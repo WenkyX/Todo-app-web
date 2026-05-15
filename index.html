@@ -1163,7 +1163,7 @@ function populateCardSelects(cat, stage) {
   state.categories.forEach(c => {
     const o = document.createElement('option');
     o.value = c.name; o.textContent = c.name;
-    if (c === cat) o.selected = true;
+    if (c.name === cat) o.selected = true;
     catSel.appendChild(o);
   });
   const stageSel = document.getElementById('fStage');
