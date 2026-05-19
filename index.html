@@ -1135,7 +1135,7 @@ function openNewCard(stage) {
   document.getElementById('fDoneDate').value = '';
   document.getElementById('fDueDate').value = '';
   document.getElementById('deleteBtn').style.display = 'none';
-  populateCardSelects(getActiveCat(), stage || (state.stages[0] ? state.stages[0].name : ''));
+  populateCardSelects(getActiveCat().name, stage || (state.stages[0] ? state.stages[0].name : ''));
   document.getElementById('cardOverlay').classList.add('open');
   setTimeout(() => document.getElementById('fTitle').focus(), 50);
 }
