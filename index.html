@@ -1501,7 +1501,9 @@ function openTextExport() {
     const catCards = state.cards.filter(c => c.category === cat.name);
     if (!catCards.length) return;
     if (!cat.is_daily) return;
-    lines.push('*' + cat.name + '*');
+    // lines.push('*' + cat.name + '*');
+    let catName = ('*' + cat.name + '*');
+    const tasks = [];
     state.stages.forEach(stageObj => {
       let stageCards = catCards.filter(c => c.stage === stageObj.name);
       if (stageObj.is_done) {
@@ -1512,9 +1514,13 @@ function openTextExport() {
         });
       }
       if (!stageCards.length) return;
-      lines.push('*' + stageObj.name + '*');
-      stageCards.forEach(c => lines.push('- ' + (c.title || 'Untitled')));
+      tasks.push('*' + stageObj.name + '*');
+      stageCards.forEach(c => tasks.push('- ' + (c.title || 'Untitled')));
     });
+    if (tasks.length) {
+      lines.push(catName);
+      lines.push(...tasks);
+    }
   });
   document.getElementById('textExportContent').value = lines.join('\n');
   document.getElementById('copyBtn').textContent = 'Copy to clipboard';
