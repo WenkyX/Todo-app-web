@@ -865,6 +865,7 @@ function exportCSV() {
   exportTaskCSV()
   
   const headers = ['id','confirmed_mandays','date','date_deadline','name','employee_id','is_manday_confirmed','mandays','overtime_mandays','is_overtime','project_id','unit_amount','requestor','task_id','task_stage_id','user_id'];
+  const nameFiltering = document.getElementById('nameFiltering2').value.split('\n');
 
   const rows = state.cards
     .slice()
@@ -872,6 +873,9 @@ function exportCSV() {
       const done = c.doneDate ? c.doneDate.slice(0, 10) : null;
       if (dateFrom && done && done <= dateFrom) return false;
       if (dateTo && done && done >= dateTo) return false;
+      if (nameFiltering.includes(c.title)) return false;
+      if (c.stage != 'Done') return false;
+      console.log(c)
       return true;
     })
     .sort((a, b) => {
@@ -913,6 +917,7 @@ function exportTaskCSV() {
   const dateFrom = document.getElementById('beginCsvExport').value;
   const dateTo = document.getElementById('endCsvExport').value;
   const headers = ['id','activity_ids','user_ids','company_id','priority','project_id','recurrence_id','sale_line_id','sequence','stage_id','planned_date_begin','state','tag_ids','name'];
+  const nameFiltering = document.getElementById('nameFiltering').value.split('\n');
 
   const rows = state.cards
     .slice()
@@ -920,6 +925,7 @@ function exportTaskCSV() {
       const done = c.doneDate ? c.doneDate.slice(0, 10) : null;
       if (dateFrom && done && done <= dateFrom) return false;
       if (dateTo && done && done >= dateTo) return false;
+      if (nameFiltering.includes(c.title)) return false;
       return true;
     })
     .sort((a, b) => {
